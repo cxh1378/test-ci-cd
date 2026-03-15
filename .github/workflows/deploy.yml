@@ -35,6 +35,7 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         # 使用密钥登录嗯嗯
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        provenance: false
         script: |
           cd /opt/express-app
           docker-compose pull
