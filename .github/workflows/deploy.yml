@@ -26,6 +26,7 @@ jobs:
         context: .
         push: true
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/express-app:latest
+        provenance: false
         
     - name: Deploy to production
       uses: appleboy/ssh-action@master
