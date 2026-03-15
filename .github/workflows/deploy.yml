@@ -19,6 +19,10 @@ jobs:
         # registry: ccc-testcicd.example.com
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    # 👉 关键：先拉取基础镜像，确保构建环境干净
+    - name: Pull base image
+      run: docker pull node:18-alpine
         
     - name: Build and push
       uses: docker/build-push-action@v5
@@ -27,11 +31,14 @@ jobs:
         push: true
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/express-app:latest
         provenance: false   # 👈 💥 必须加在这里！！！(属于 Build and push 步骤)
-    
-    - name: Verify image on Docker Hub
-      run: |
-        docker pull ${{ secrets.DOCKERHUB_USERNAME }}/express-app:latest
-        echo "Image pulled successfully"
+        # 👉 禁用缓存，确保全新构建
+        no-cache: true
+        # 👉 明确指定平台
+        platforms: linux/amd64
+
+    # 👉 关键：添加推送完成验证
+    - name: Wait for image propagation
+      run: sleep 30
         
     - name: Deploy to production
       uses: appleboy/ssh-action@master
