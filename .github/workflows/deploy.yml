@@ -37,5 +37,15 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           cd /opt/express-app
+          # 清理旧镜像缓存
+          docker image prune -f
+          # 拉取最新镜像（添加重试）
+          for i in 1 2 3; do
+            docker-compose pull && break || sleep 5
+          done
+          docker-compose up -d
+          # 清理悬空镜像
+          docker image prune -f
+          cd /opt/express-app
           docker-compose pull
           docker-compose up -d
