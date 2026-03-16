@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -19,26 +22,17 @@ jobs:
         # registry: ccc-testcicd.example.com
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    # 👉 关键：先拉取基础镜像，确保构建环境干净
-    - name: Pull base image
-      run: docker pull node:18-alpine
         
     - name: Build and push
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/express-app:latest
         provenance: false   # 👈 💥 必须加在这里！！！(属于 Build and push 步骤)
-        # 👉 禁用缓存，确保全新构建
-        no-cache: true
-        # 👉 明确指定平台
-        platforms: linux/amd64
-
-    # 👉 关键：添加推送完成验证
-    - name: Wait for image propagation
-      run: sleep 30
+        # 💥 修改点 1：打上两个标签！一个是 latest，一个是 GitHub 本次运行的唯一 ID
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/express-app:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/express-app:${{ github.run_id }}
         
     - name: Deploy to production
       uses: appleboy/ssh-action@master
@@ -47,13 +41,16 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         # 使用密钥登录
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        # 💥 修改点 2：把唯一 ID 作为环境变量传给脚本
+        envs: GITHUB_RUN_ID
         script: |
           cd /opt/express-app
-          # 清理旧镜像避免缓存冲突
-          docker image prune -f
-          # 拉取最新镜像
+          
+          # 告诉 docker-compose，本次我们要部署的版本号是这个唯一 ID
+          export IMAGE_TAG=$GITHUB_RUN_ID
+          
+          # 拉取最新的唯一版本（镜像源无法缓存，被迫拉取最新）
           docker-compose pull
-          # 重启服务
-          docker-compose up -d
-          # 清理悬空镜像
-          docker image prune -f
+          
+          # 重启容器，移除不再使用的旧镜像
+          docker-compose up -d --remove-orphans
