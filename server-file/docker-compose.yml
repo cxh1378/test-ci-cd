@@ -1,0 +1,7 @@
+services:
+  web:
+    # 这里写你在上一步 GitHub Actions 中打包好并上传的镜像名字
+    image: hui1378/express-app:${IMAGE_TAG:-latest}
+    ports:
+      - "5555:3000"  # 把服务器的80端口映射到容器的3000端口
+    restart: always # 如果程序崩溃，自动重启
